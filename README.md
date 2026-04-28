@@ -1,4 +1,4 @@
-# 📊 JobsToFind - Inteligencia de Mercado Laboral para Ingenieros de Sistemas
+# 📊 JobsToFind
 
 ## 🎯 Título del Proyecto
 
