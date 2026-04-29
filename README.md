@@ -1,4 +1,4 @@
-# 📊 JobsToFind
+# 📊 JobsForUs
 
 ## 🎯 Título del Proyecto
 
