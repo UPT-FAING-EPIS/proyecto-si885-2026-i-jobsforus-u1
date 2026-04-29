@@ -71,13 +71,13 @@ Desarrollar un Sistema que analice ofertas laborales del sector tecnológico, pa
 ## Capturas del Dashoboard mediante PowerBI
 
 **Resumen General**
-![dashboard1](./media/dashboard1.png)
+![dashboard1](media/dashboard1.PNG)
 
 **Análisis de Salarios**
-![dashboard2](./media/dashboard2.png)
+![dashboard2](media/dashboard2.PNG)
 
 **Demanda por Tecnología**
-![dashboard3](./media/dashboard3.png)
+![dashboard3](media/dashboard3.PNG)
 
 **Detalle de Ofertas**
-![dashboard4](./media/dashboard4.png)
+![dashboard4](media/dashboard4.PNG)
