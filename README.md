@@ -67,3 +67,17 @@ Desarrollar un Sistema que analice ofertas laborales del sector tecnológico, pa
 | Control de versiones | GitHub | Repositorio del proyecto |
 
 ---
+
+## Capturas del Dashoboard mediante PowerBI
+
+**Resumen General**
+![dashboard1](./media/dashboard1.png)
+
+**Análisis de Salarios**
+![dashboard1](./media/dashboard2.png)
+
+**Demanda por Tecnología**
+![dashboard1](./media/dashboard3.png)
+
+**Detalle de Ofertas**
+![dashboard1](./media/dashboard4.png)
