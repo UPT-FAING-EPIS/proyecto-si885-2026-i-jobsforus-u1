@@ -9,8 +9,8 @@ import os
 # Agregar la carpeta raíz del proyecto al path
 # Esto permite importar desde src
 # os.path.dirname(os.path.dirname(__file__)) sube dos niveles:
-#   tests/test_extractor.py -> tests/ -> JobForUs - Sistema/
-proyecto_root = os.path.dirname(os.path.dirname(os.path.abspath("tests/test_extractor.py")))
+# proyecto_root = os.path.dirname(os.path.dirname(os.path.abspath("tests/test_extractor.py")))
+proyecto_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(proyecto_root)
 
 print(f"📁 Ruta del proyecto: {proyecto_root}")
