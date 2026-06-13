@@ -40,3 +40,8 @@ data/processed/*.csv
 *.log
 *.tmp
 .DS_Store
+
+# Credenciales y secretos
+credentials/
+*.json
+!requirements.txt
