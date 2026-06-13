@@ -6,7 +6,7 @@ name: ETL Automatizado - JobForUs
 
 # Disparadores del workflow
 on:
-  # Ejecutar diario a las 2:00 AM (UTC) / 9:00 PM (Perú)
+  # Ejecutar diario a las 2:00 AM (UTC)
   schedule:
     - cron: '0 2 * * *'
   
@@ -23,9 +23,7 @@ on:
 # Jobs a ejecutar
 jobs:
   
-  # ============================================
-  # JOB 1: Ejecutar ETL y cargar a BigQuery
-  # ============================================
+  # Job 1: Ejecutar ETL y cargar a BigQuery
   ejecutar-etl-y-carga:
     name: Ejecutar ETL y cargar a BigQuery
     runs-on: ubuntu-latest
@@ -56,24 +54,17 @@ jobs:
           mkdir -p "JobForUs - Sistema/credentials"
           echo '${{ secrets.GCP_KEY }}' > "JobForUs - Sistema/credentials/gcp-key.json"
       
-      # 5. Ejecutar pipeline ETL
+      # 5. Ejecutar pipeline ETL (sin EOF)
       - name: Ejecutar pipeline ETL
         run: |
           cd "JobForUs - Sistema"
-          echo "🚀 Iniciando pipeline ETL..."
-          python tests/test_pipeline_completo.py << EOF
-          1
-          EOF
+          echo "1" | python tests/test_pipeline_completo.py
       
-      # 6. Cargar datos a BigQuery
+      # 6. Cargar datos a BigQuery (sin EOF)
       - name: Cargar a BigQuery
         run: |
           cd "JobForUs - Sistema"
-          echo "📤 Cargando datos a BigQuery..."
-          python src/load/bigquery_loader.py << EOF
-          1
-          s
-          EOF
+          echo "1" | python src/load/bigquery_loader.py
       
       # 7. Subir artefactos (logs)
       - name: Subir logs
@@ -92,9 +83,7 @@ jobs:
           echo "📊 Fecha: $(date)"
           echo "📁 Dataset: jobforus-project.job_market"
 
-  # ============================================
-  # JOB 2: Verificar integridad (opcional)
-  # ============================================
+  # Job 2: Verificar integridad (opcional)
   verificar-datos:
     name: Verificar integridad de los datos
     runs-on: ubuntu-latest
