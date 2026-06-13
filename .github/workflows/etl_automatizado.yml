@@ -4,42 +4,30 @@
 
 name: ETL Automatizado - JobForUs
 
-# Disparadores del workflow
 on:
-  # Ejecutar diario a las 2:00 AM (UTC)
   schedule:
     - cron: '0 2 * * *'
-  
-  # Ejecutar manualmente desde GitHub
   workflow_dispatch:
-  
-  # Ejecutar cuando se actualice el dataset o los scripts
   push:
     paths:
       - 'JobForUs - Sistema/data/raw/*.csv'
       - 'JobForUs - Sistema/src/**/*.py'
-      - 'JobForUs - Sistema/tests/test_pipeline_completo.py'
 
-# Jobs a ejecutar
 jobs:
   
-  # Job 1: Ejecutar ETL y cargar a BigQuery
   ejecutar-etl-y-carga:
     name: Ejecutar ETL y cargar a BigQuery
     runs-on: ubuntu-latest
     
     steps:
-      # 1. Clonar el repositorio
       - name: Checkout código
         uses: actions/checkout@v4
       
-      # 2. Configurar Python
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
       
-      # 3. Instalar dependencias
       - name: Instalar dependencias
         run: |
           python -m pip install --upgrade pip
@@ -48,42 +36,24 @@ jobs:
             pip install -r "JobForUs - Sistema/requirements.txt"
           fi
       
-      # 4. Configurar credenciales de Google Cloud
       - name: Configurar credenciales GCP
         run: |
           mkdir -p "JobForUs - Sistema/credentials"
           echo '${{ secrets.GCP_KEY }}' > "JobForUs - Sistema/credentials/gcp-key.json"
       
-      # 5. Ejecutar pipeline ETL (sin EOF)
       - name: Ejecutar pipeline ETL
         run: |
           cd "JobForUs - Sistema"
           echo "1" | python tests/test_pipeline_completo.py
       
-      # 6. Cargar datos a BigQuery (sin EOF)
       - name: Cargar a BigQuery
         run: |
           cd "JobForUs - Sistema"
           echo "1" | python src/load/bigquery_loader.py
       
-      # 7. Subir artefactos (logs)
-      - name: Subir logs
-        uses: actions/upload-artifact@v4
-        with:
-          name: etl-logs
-          path: |
-            JobForUs - Sistema/*.log
-            JobForUs - Sistema/logs/
-          retention-days: 7
-      
-      # 8. Notificar completado
       - name: Notificar completado
-        run: |
-          echo "✅ ETL y carga completados exitosamente"
-          echo "📊 Fecha: $(date)"
-          echo "📁 Dataset: jobforus-project.job_market"
+        run: echo "✅ ETL y carga completados exitosamente"
 
-  # Job 2: Verificar integridad (opcional)
   verificar-datos:
     name: Verificar integridad de los datos
     runs-on: ubuntu-latest
@@ -115,9 +85,9 @@ jobs:
 from src.load.bigquery_loader import BigQueryLoader
 loader = BigQueryLoader()
 if loader.conectar():
-    query = 'SELECT COUNT(*) as total FROM `jobforus-project.job_market.fact_oferta`'
+    query = 'SELECT COUNT(*) as total FROM jobforus-project.job_market.fact_oferta'
     result = loader.client.query(query).to_dataframe()
-    print(f'✅ Registros en BigQuery: {result[\"total\"].values[0]}')
+    print(f'Registros en BigQuery: {result[chr(34)]total[chr(34)].values[0]}')
 "
       
       - name: Generar reporte
