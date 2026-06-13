@@ -1,20 +1,11 @@
-# ============================================
-# GitHub Actions - ETL Automatizado JobForUs
-# ============================================
-
 name: ETL Automatizado - JobForUs
 
 on:
   schedule:
     - cron: '0 2 * * *'
   workflow_dispatch:
-  push:
-    paths:
-      - 'JobForUs - Sistema/data/raw/*.csv'
-      - 'JobForUs - Sistema/src/**/*.py'
 
 jobs:
-  
   ejecutar-etl-y-carga:
     name: Ejecutar ETL y cargar a BigQuery
     runs-on: ubuntu-latest
@@ -53,52 +44,3 @@ jobs:
       
       - name: Notificar completado
         run: echo "✅ ETL y carga completados exitosamente"
-
-  verificar-datos:
-    name: Verificar integridad de los datos
-    runs-on: ubuntu-latest
-    needs: ejecutar-etl-y-carga
-    if: always()
-    
-    steps:
-      - name: Checkout código
-        uses: actions/checkout@v4
-      
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-      
-      - name: Instalar dependencias
-        run: |
-          pip install pandas google-cloud-bigquery
-      
-      - name: Configurar credenciales
-        run: |
-          mkdir -p "JobForUs - Sistema/credentials"
-          echo '${{ secrets.GCP_KEY }}' > "JobForUs - Sistema/credentials/gcp-key.json"
-      
-      - name: Verificar datos
-        run: |
-          cd "JobForUs - Sistema"
-          python -c "
-from src.load.bigquery_loader import BigQueryLoader
-loader = BigQueryLoader()
-if loader.conectar():
-    query = 'SELECT COUNT(*) as total FROM jobforus-project.job_market.fact_oferta'
-    result = loader.client.query(query).to_dataframe()
-    print(f'Registros en BigQuery: {result[chr(34)]total[chr(34)].values[0]}')
-"
-      
-      - name: Generar reporte
-        run: |
-          echo "# Reporte ETL - JobForUs" > reporte.md
-          echo "Fecha: $(date)" >> reporte.md
-          echo "✅ Ejecución exitosa" >> reporte.md
-      
-      - name: Subir reporte
-        uses: actions/upload-artifact@v4
-        with:
-          name: reporte-etl
-          path: reporte.md
-          retention-days: 30
