@@ -4,6 +4,7 @@ Carga la tabla de hechos y las tablas de dimensiones
 """
 
 import pandas as pd
+import sys
 from google.cloud import bigquery
 from google.oauth2 import service_account
 from datetime import datetime
@@ -173,10 +174,9 @@ class BigQueryLoader:
                 'tecnologia_principal': 'nombre',
                 'categoria_principal': 'categoria'
             })
-            # Limpiar valores que contengan múltiples tecnologías (separadores)
+            # Limpiar valores que contengan múltiples tecnologías
             dim = dim[~dim['nombre'].str.contains(';', na=False)]
             dim = dim[~dim['nombre'].str.contains(',', na=False)]
-            # Limitar a 1000 tecnologías principales (para rendimiento)
             dim = dim.head(1000)
             self.cargar_tabla(dim, "dim_tecnologia", "WRITE_TRUNCATE")
             print(f"      - Tecnologías limpias: {len(dim)}")
@@ -216,31 +216,35 @@ class BigQueryLoader:
             return False
 
 
-if __name__ == "__main__":
+def modo_automatico():
+    """Ejecuta en modo automático para GitHub Actions"""
+    print("🚀 Ejecutando en modo automático...")
     loader = BigQueryLoader()
-    
-    print("=" * 60)
-    print("CARGADOR A BIGQUERY - JOBFORUS")
-    print("=" * 60)
-    print("\nOpciones:")
-    print("   1. Recargar datos completos (con dimensiones limpias)")
-    print("   2. Solo cargar tabla de hechos")
-    print("   3. Salir")
-    
-    opcion = input("\nIngresa tu opción (1-3): ").strip()
-    
-    if opcion == "1":
-        print("\n💡 IMPORTANTE: Asegúrate de haber ejecutado primero:")
-        print("   python tests/test_pipeline_completo.py")
-        print("\n¿Ya ejecutaste el pipeline y generaste el CSV limpio? (s/n): ")
-        respuesta = input().strip().lower()
-        
-        if respuesta == 's' or respuesta == 'si':
-            loader.recargar_con_dimensiones_limpias()
-        else:
-            print("\n❌ Ejecuta primero el pipeline y luego vuelve a intentar.")
-            print("   Comando: python tests/test_pipeline_completo.py")
-    elif opcion == "2":
-        loader.cargar_desde_csv_simple()
+    loader.recargar_con_dimensiones_limpias()
+    return True
+
+
+if __name__ == "__main__":
+    # Si se pasa el argumento --auto, ejecutar en modo automático
+    if len(sys.argv) > 1 and sys.argv[1] == "--auto":
+        modo_automatico()
     else:
-        print("Saliendo...")
+        # Modo interactivo original
+        print("=" * 60)
+        print("CARGADOR A BIGQUERY - JOBFORUS")
+        print("=" * 60)
+        print("\nOpciones:")
+        print("   1. Recargar datos completos (con dimensiones limpias)")
+        print("   2. Solo cargar tabla de hechos")
+        print("   3. Salir")
+        
+        opcion = input("\nIngresa tu opción (1-3): ").strip()
+        
+        if opcion == "1":
+            loader = BigQueryLoader()
+            loader.recargar_con_dimensiones_limpias()
+        elif opcion == "2":
+            loader = BigQueryLoader()
+            loader.cargar_desde_csv_simple()
+        else:
+            print("Saliendo...")

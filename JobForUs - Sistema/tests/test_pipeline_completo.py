@@ -137,39 +137,6 @@ def test_pipeline_completo(aplicar_filtro_latam=False, guardar_resultado=False):
         return False
     
     # ============================================================
-    # PASO 4: VERIFICACIÓN DE RESULTADOS
-    # ============================================================
-    print_seccion("🔍 PASO 4: VERIFICACIÓN DE RESULTADOS", "-", 70)
-    
-    try:
-        conn = sqlite3.connect(loader.db_path)
-        cursor = conn.cursor()
-        
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
-        tablas = cursor.fetchall()
-        print(f"\n📋 Tablas creadas en la base de datos:")
-        for tabla in tablas:
-            print(f"   - {tabla[0]}")
-        
-        cursor.execute("SELECT COUNT(*) FROM fact_oferta")
-        total_ofertas = cursor.fetchone()[0]
-        print(f"\n📊 Registros en fact_oferta: {total_ofertas}")
-        
-        # Verificar columnas de ID en la base de datos
-        cursor.execute("PRAGMA table_info(fact_oferta)")
-        columnas_bd = [col[1] for col in cursor.fetchall()]
-        columnas_id_bd = [col for col in columnas_bd if col.endswith('_id')]
-        if columnas_id_bd:
-            print(f"\n🔑 Columnas de ID en la base de datos:")
-            for col in columnas_id_bd:
-                print(f"   - {col}")
-        
-        conn.close()
-        
-    except Exception as e:
-        print(f"⚠️ Advertencia en verificación: {e}")
-    
-    # ============================================================
     # RESUMEN FINAL
     # ============================================================
     print_seccion("✅ PIPELINE COMPLETADO EXITOSAMENTE", "=", 70)
@@ -202,31 +169,43 @@ def test_sin_filtro():
     return test_pipeline_completo(aplicar_filtro_latam=False, guardar_resultado=True)
 
 
+def modo_automatico():
+    """Ejecuta en modo automático para GitHub Actions"""
+    print("🚀 Ejecutando pipeline en modo automático...")
+    return test_sin_filtro()
+
+
 if __name__ == "__main__":
-    print("=" * 70)
-    print("🧪 JOBFORUS - PRUEBA INTEGRADA DEL PIPELINE COMPLETO")
-    print("=" * 70)
-    print("\nSelecciona una opción:")
-    print("   1. Ejecutar pipeline con DATOS GLOBALES (todos los países)")
-    print("   2. Ejecutar pipeline con FILTRO LATAM (solo Latinoamérica)")
-    print("   3. Ejecutar ambas pruebas")
-    print("   4. Salir")
-    
-    opcion = input("\nIngresa tu opción (1-4): ").strip()
-    
-    if opcion == "1":
-        test_sin_filtro()
-    elif opcion == "2":
-        test_solo_latam()
-    elif opcion == "3":
-        print("\n" + "=" * 70)
-        print("📊 PRIMERA PRUEBA: DATOS GLOBALES")
-        print("=" * 70)
-        test_sin_filtro()
-        
-        print("\n" + "=" * 70)
-        print("📊 SEGUNDA PRUEBA: FILTRO LATAM")
-        print("=" * 70)
-        test_solo_latam()
+    # Si se pasa el argumento --auto, ejecutar en modo automático
+    if len(sys.argv) > 1 and sys.argv[1] == "--auto":
+        resultado = modo_automatico()
+        sys.exit(0 if resultado else 1)
     else:
-        print("Saliendo...")
+        # Modo interactivo original
+        print("=" * 70)
+        print("🧪 JOBFORUS - PRUEBA INTEGRADA DEL PIPELINE COMPLETO")
+        print("=" * 70)
+        print("\nSelecciona una opción:")
+        print("   1. Ejecutar pipeline con DATOS GLOBALES (todos los países)")
+        print("   2. Ejecutar pipeline con FILTRO LATAM (solo Latinoamérica)")
+        print("   3. Ejecutar ambas pruebas")
+        print("   4. Salir")
+        
+        opcion = input("\nIngresa tu opción (1-4): ").strip()
+        
+        if opcion == "1":
+            test_sin_filtro()
+        elif opcion == "2":
+            test_solo_latam()
+        elif opcion == "3":
+            print("\n" + "=" * 70)
+            print("📊 PRIMERA PRUEBA: DATOS GLOBALES")
+            print("=" * 70)
+            test_sin_filtro()
+            
+            print("\n" + "=" * 70)
+            print("📊 SEGUNDA PRUEBA: FILTRO LATAM")
+            print("=" * 70)
+            test_solo_latam()
+        else:
+            print("Saliendo...")

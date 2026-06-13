@@ -17,7 +17,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.11'
       
       - name: Instalar dependencias
         run: |
@@ -32,15 +32,15 @@ jobs:
           mkdir -p "JobForUs - Sistema/credentials"
           echo '${{ secrets.GCP_KEY }}' > "JobForUs - Sistema/credentials/gcp-key.json"
       
-      - name: Ejecutar pipeline ETL
+      - name: Ejecutar pipeline ETL (modo automático)
         run: |
           cd "JobForUs - Sistema"
-          echo "1" | python tests/test_pipeline_completo.py
+          python tests/test_pipeline_completo.py --auto
       
-      - name: Cargar a BigQuery
+      - name: Cargar a BigQuery (modo automático)
         run: |
           cd "JobForUs - Sistema"
-          echo "1" | python src/load/bigquery_loader.py
+          python src/load/bigquery_loader.py --auto
       
       - name: Notificar completado
         run: echo "✅ ETL y carga completados exitosamente"
