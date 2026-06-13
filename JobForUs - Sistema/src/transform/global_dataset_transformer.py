@@ -33,6 +33,20 @@ class GlobalDatasetTransformer:
             'Senior (6-10 yrs)': 'Senior',
             'Lead (11-15 yrs)': 'Lead'
         }
+        
+        # Mapeo de modalidad de trabajo a IDs
+        self.work_setting_map = {
+            'Remote': 1,
+            'Hybrid': 2,
+            'On-site': 3
+        }
+        
+        # Mapeo de género a IDs
+        self.gender_map = {
+            'Male': 1,
+            'Female': 2,
+            'Non-binary': 3
+        }
     
     def _log(self, message, level="INFO"):
         """Registra un mensaje en el log."""
@@ -95,7 +109,6 @@ class GlobalDatasetTransformer:
         
         if 'base_salary_usd' in df.columns:
             df['base_salary_usd'] = pd.to_numeric(df['base_salary_usd'], errors='coerce')
-            # Crear alias 'salary_usd' para compatibilidad con dashboard existente
             df['salary_usd'] = df['base_salary_usd']
             self._log(f"   - Salario base: ${df['base_salary_usd'].mean():,.0f} promedio")
         
@@ -107,7 +120,7 @@ class GlobalDatasetTransformer:
     
     def clasificar_seniority(self, df):
         """
-        Clasifica el seniority basado en experience_level.
+        Clasifica el seniority basado en experience_level y crea IDs.
         """
         self._log("🏷️ Clasificando seniority...")
         
@@ -116,8 +129,8 @@ class GlobalDatasetTransformer:
             df['seniority_name'] = df['seniority_name'].fillna('No especificado')
             df['seniority_code'] = df['experience_level'].map(self.experience_map)
             df['seniority_code'] = df['seniority_code'].fillna(0)
+            df['seniority_id'] = df['seniority_code']
             
-            # Distribución
             distribucion = df['seniority_name'].value_counts()
             self._log(f"\n   📊 Distribución de seniority:")
             for nivel, cantidad in distribucion.items():
@@ -127,6 +140,65 @@ class GlobalDatasetTransformer:
             self._log("   ⚠️ No se encontró columna 'experience_level'")
             df['seniority_name'] = 'No especificado'
             df['seniority_code'] = 0
+            df['seniority_id'] = 0
+        
+        return df
+    
+    def extraer_primera_tecnologia(self, skills_texto):
+        """
+        Extrae la primera tecnología de una lista de habilidades.
+        
+        Args:
+            skills_texto: Texto con habilidades (ej: 'Python, SQL, AWS' o 'AWS; Docker')
+            
+        Returns:
+            Primera tecnología encontrada
+        """
+        if pd.isna(skills_texto) or skills_texto == '':
+            return 'Sin tecnología'
+        
+        skills_texto = str(skills_texto)
+        
+        # Reemplazar punto y coma por coma
+        skills_texto = skills_texto.replace(';', ',')
+        
+        # Tomar la primera tecnología antes de la primera coma
+        primera_tech = skills_texto.split(',')[0].strip()
+        
+        # Limitar longitud (evitar cadenas muy largas)
+        if len(primera_tech) > 50:
+            primera_tech = primera_tech[:50]
+        
+        return primera_tech if primera_tech else 'Sin tecnología'
+    
+    def agregar_ids_dimensiones(self, df):
+        """
+        Agrega columnas de ID para todas las dimensiones.
+        """
+        self._log("🔑 Agregando IDs para dimensiones...")
+        
+        # Mapear país a ubicacion_id
+        paises_unicos = df['country'].dropna().unique()
+        pais_map = {pais: idx+1 for idx, pais in enumerate(paises_unicos)}
+        df['ubicacion_id'] = df['country'].map(pais_map).fillna(0)
+        self._log(f"   - {len(paises_unicos)} países mapeados a ubicacion_id")
+        
+        # Mapear modalidad de trabajo
+        df['work_setting_id'] = df['work_setting'].map(self.work_setting_map).fillna(0)
+        self._log(f"   - Modalidad de trabajo mapeada a work_setting_id")
+        
+        # Mapear género
+        df['gender_id'] = df['gender'].map(self.gender_map).fillna(0)
+        self._log(f"   - Género mapeado a gender_id")
+        
+        # Extraer primera tecnología (¡LIMPIADO!)
+        df['tecnologia_principal'] = df['primary_skills'].apply(self.extraer_primera_tecnologia)
+        
+        # Mapear tecnologías a IDs
+        techs_unicas = df['tecnologia_principal'].unique()
+        tech_map = {tech: idx+1 for idx, tech in enumerate(techs_unicas)}
+        df['tecnologia_id'] = df['tecnologia_principal'].map(tech_map).fillna(0)
+        self._log(f"   - {len(techs_unicas)} tecnologías mapeadas a tecnologia_id")
         
         return df
     
@@ -146,35 +218,17 @@ class GlobalDatasetTransformer:
             'AI/ML': ['PyTorch', 'TensorFlow', 'Hugging Face', 'LangChain', 'OpenCV', 'Machine Learning', 'AI']
         }
         
-        def extraer_tecnologia_principal(skills_texto):
-            if pd.isna(skills_texto) or skills_texto == '':
-                return 'Sin tecnología'
-            skills_texto = str(skills_texto)
-            for categoria, tecnologias in tech_categories.items():
-                for tech in tecnologias:
-                    if tech.lower() in skills_texto.lower():
-                        return tech
-            return 'Otra'
-        
-        def extraer_categoria_principal(skills_texto):
-            if pd.isna(skills_texto) or skills_texto == '':
+        def extraer_categoria_principal(tech_nombre):
+            if pd.isna(tech_nombre) or tech_nombre == 'Sin tecnología':
                 return 'No especificada'
-            skills_texto = str(skills_texto)
             for categoria, tecnologias in tech_categories.items():
                 for tech in tecnologias:
-                    if tech.lower() in skills_texto.lower():
+                    if tech.lower() == tech_nombre.lower():
                         return categoria
             return 'Otra'
         
-        if 'primary_skills' in df.columns:
-            df['tecnologia_principal'] = df['primary_skills'].apply(extraer_tecnologia_principal)
-            df['categoria_principal'] = df['primary_skills'].apply(extraer_categoria_principal)
-            
-            top_tech = df['tecnologia_principal'].value_counts().head(10)
-            self._log(f"\n   📊 Top 10 tecnologías:")
-            for tech, count in top_tech.items():
-                if tech != 'Sin tecnología':
-                    self._log(f"      - {tech}: {count} registros")
+        if 'tecnologia_principal' in df.columns:
+            df['categoria_principal'] = df['tecnologia_principal'].apply(extraer_categoria_principal)
             
             top_cats = df['categoria_principal'].value_counts()
             self._log(f"\n   📊 Categorías principales:")
@@ -184,7 +238,6 @@ class GlobalDatasetTransformer:
                     self._log(f"      - {cat}: {count} registros ({porcentaje:.1f}%)")
         else:
             self._log("   ⚠️ No se encontró columna 'primary_skills'")
-            df['tecnologia_principal'] = 'No disponible'
             df['categoria_principal'] = 'No disponible'
         
         return df
@@ -203,10 +256,14 @@ class GlobalDatasetTransformer:
         
         return df
     
-    def guardar_dataset_transformado(self, df, output_path="../data/processed/global_dataset_transformado.csv"):
+    def guardar_dataset_transformado(self, df, output_path=None):
         """
         Guarda el dataset transformado en un archivo CSV.
         """
+        if output_path is None:
+            script_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            output_path = os.path.join(script_dir, "data", "processed", "global_dataset_transformado.csv")
+        
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
         df.to_csv(output_path, index=False)
         self._log(f"💾 Dataset transformado guardado en: {output_path}")
@@ -219,7 +276,6 @@ class GlobalDatasetTransformer:
         self._log("🔄 INICIANDO TRANSFORMACIÓN DEL DATASET GLOBAL")
         self._log("=" * 60)
         
-        # Validación inicial
         columnas_requeridas = ['job_title', 'base_salary_usd', 'country', 'experience_level']
         columnas_faltantes = [col for col in columnas_requeridas if col not in df.columns]
         
@@ -248,11 +304,14 @@ class GlobalDatasetTransformer:
         self._log("\n📌 Paso 3: Clasificación de seniority")
         df = self.clasificar_seniority(df)
         
-        # Paso 4: Clasificar tecnologías
-        self._log("\n📌 Paso 4: Clasificación de tecnologías")
+        # Paso 4: Agregar IDs de dimensiones (incluye extracción limpia de tecnología)
+        self._log("\n📌 Paso 4: Agregando IDs para dimensiones")
+        df = self.agregar_ids_dimensiones(df)
+        
+        # Paso 5: Clasificar tecnologías
+        self._log("\n📌 Paso 5: Clasificación de tecnologías")
         df = self.clasificar_tecnologias(df)
         
-        # Guardar resultado si se solicita
         if guardar_resultado:
             self.guardar_dataset_transformado(df)
         
@@ -283,6 +342,11 @@ def probar_transformacion(df):
     
     if df_transformado is not None:
         print(f"\n✅ Transformación exitosa: {len(df_transformado)} registros")
+        # Verificar la extracción de tecnología
+        print("\n🔧 Ejemplo de tecnologías extraídas:")
+        ejemplos = df_transformado[['primary_skills', 'tecnologia_principal']].head(5)
+        for idx, row in ejemplos.iterrows():
+            print(f"   Original: {row['primary_skills'][:50]}... → Extraído: {row['tecnologia_principal']}")
     else:
         print("\n❌ Transformación fallida")
     

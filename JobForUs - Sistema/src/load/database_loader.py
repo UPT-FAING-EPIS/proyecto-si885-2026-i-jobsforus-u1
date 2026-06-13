@@ -65,29 +65,35 @@ class DatabaseLoader:
     def crear_tablas(self, schema_path="database/schema.sql"):
         """
         Crea las tablas ejecutando el script schema.sql.
-        
-        Args:
-            schema_path: Ruta al archivo de esquema SQL
-            
-        Returns:
-            True si la creación fue exitosa, False en caso contrario
         """
         try:
-            # Obtener ruta absoluta del schema
             script_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
             schema_full_path = os.path.join(script_dir, schema_path)
             
             self._log(f"📝 Creando tablas desde: {schema_full_path}")
             
-            # Leer y ejecutar el script SQL
+            # PRIMERO: Eliminar vistas existentes
+            vistas = [
+                "vw_salario_por_tecnologia", "vw_salario_por_seniority", 
+                "vw_tecnologias_demandadas", "vw_salario_por_genero",
+                "vw_salario_por_work_setting", "vw_evolucion_salarial",
+                "vw_adopcion_ia_por_anio", "vw_satisfaccion_por_seniority"
+            ]
+            for vista in vistas:
+                try:
+                    self.cursor.execute(f"DROP VIEW IF EXISTS {vista}")
+                except:
+                    pass
+            self.connection.commit()
+            
+            # SEGUNDO: Ejecutar el schema.sql
             with open(schema_full_path, 'r', encoding='utf-8') as f:
                 schema_sql = f.read()
             
-            # Ejecutar el script (pueden ser múltiples sentencias)
             self.cursor.executescript(schema_sql)
             self.connection.commit()
             
-            self._log("✅ Tablas creadas correctamente")
+            self._log("✅ Tablas y vistas creadas correctamente")
             return True
             
         except Exception as e:

@@ -12,6 +12,7 @@ Este script ejecuta:
 import sys
 import os
 import pandas as pd
+import sqlite3
 
 # Agregar la carpeta raíz del proyecto al path
 proyecto_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -27,6 +28,13 @@ def print_seccion(titulo, caracter="=", longitud=70):
     print("\n" + caracter * longitud)
     print(f" {titulo}")
     print(caracter * longitud)
+
+
+def mostrar_columnas(df, titulo="Columnas disponibles"):
+    """Muestra las columnas de un DataFrame."""
+    print(f"\n📋 {titulo}:")
+    for col in df.columns:
+        print(f"   - {col}")
 
 
 def test_pipeline_completo(aplicar_filtro_latam=False, guardar_resultado=False):
@@ -59,7 +67,8 @@ def test_pipeline_completo(aplicar_filtro_latam=False, guardar_resultado=False):
         print(f"\n✅ Extracción exitosa:")
         print(f"   - Registros: {len(df_original)}")
         print(f"   - Columnas: {len(df_original.columns)}")
-        print(f"   - Columnas disponibles: {list(df_original.columns)[:10]}...")
+        
+        mostrar_columnas(df_original, "Primeras 10 columnas del dataset original")
         
     except Exception as e:
         print(f"❌ Error en extracción: {e}")
@@ -91,10 +100,13 @@ def test_pipeline_completo(aplicar_filtro_latam=False, guardar_resultado=False):
         print(f"   - Columnas finales: {len(df_transformado.columns)}")
         
         # Mostrar nuevas columnas agregadas
-        nuevas_columnas = ['seniority_name', 'tecnologia_principal', 'categoria_principal', 'salary_usd']
+        nuevas_columnas = ['seniority_name', 'seniority_id', 'tecnologia_id', 
+                          'ubicacion_id', 'work_setting_id', 'gender_id']
         columnas_presentes = [col for col in nuevas_columnas if col in df_transformado.columns]
         if columnas_presentes:
-            print(f"   - Nuevas columnas agregadas: {columnas_presentes}")
+            print(f"\n   ✅ Nuevas columnas de ID agregadas:")
+            for col in columnas_presentes:
+                print(f"      - {col}")
         
     except Exception as e:
         print(f"❌ Error en transformación: {e}")
@@ -130,75 +142,27 @@ def test_pipeline_completo(aplicar_filtro_latam=False, guardar_resultado=False):
     print_seccion("🔍 PASO 4: VERIFICACIÓN DE RESULTADOS", "-", 70)
     
     try:
-        # Conectar a la base de datos para verificar
         conn = sqlite3.connect(loader.db_path)
         cursor = conn.cursor()
         
-        # Verificar tablas creadas
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
         tablas = cursor.fetchall()
         print(f"\n📋 Tablas creadas en la base de datos:")
         for tabla in tablas:
             print(f"   - {tabla[0]}")
         
-        # Verificar registros en fact_oferta
         cursor.execute("SELECT COUNT(*) FROM fact_oferta")
         total_ofertas = cursor.fetchone()[0]
         print(f"\n📊 Registros en fact_oferta: {total_ofertas}")
         
-        # Verificar vistas creadas
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='view'")
-        vistas = cursor.fetchall()
-        print(f"\n📋 Vistas creadas:")
-        for vista in vistas:
-            print(f"   - {vista[0]}")
-        
-        # Verificar top tecnologías
-        print(f"\n🏆 Top 5 tecnologías más demandadas:")
-        cursor.execute("""
-            SELECT nombre, categoria, cantidad_ofertas 
-            FROM vw_tecnologias_demandadas 
-            LIMIT 5
-        """)
-        top_tech = cursor.fetchall()
-        for tech, cat, count in top_tech:
-            print(f"   - {tech} ({cat}): {count} ofertas")
-        
-        # Verificar salarios por seniority
-        print(f"\n💰 Salarios promedio por seniority:")
-        cursor.execute("""
-            SELECT seniority, salario_promedio 
-            FROM vw_salario_por_seniority
-        """)
-        salarios = cursor.fetchall()
-        for seniority, salario in salarios:
-            print(f"   - {seniority}: ${salario:,.0f}")
-        
-        # Verificar distribución por género (si hay datos)
-        cursor.execute("""
-            SELECT gender, COUNT(*) as cantidad 
-            FROM fact_oferta 
-            WHERE gender IS NOT NULL AND gender != ''
-            GROUP BY gender
-        """)
-        generos = cursor.fetchall()
-        if generos:
-            print(f"\n👥 Distribución por género:")
-            for genero, cantidad in generos:
-                print(f"   - {genero}: {cantidad} registros")
-        
-        # Verificar distribución por modalidad de trabajo
-        cursor.execute("""
-            SELECT work_setting, COUNT(*) as cantidad 
-            FROM fact_oferta 
-            WHERE work_setting IS NOT NULL
-            GROUP BY work_setting
-        """)
-        work_settings = cursor.fetchall()
-        if work_settings:
-            print(f"\n💼 Distribución por modalidad de trabajo:")
-            for setting, cantidad in work_settings:
-                print(f"   - {setting}: {cantidad} registros")
+        # Verificar columnas de ID en la base de datos
+        cursor.execute("PRAGMA table_info(fact_oferta)")
+        columnas_bd = [col[1] for col in cursor.fetchall()]
+        columnas_id_bd = [col for col in columnas_bd if col.endswith('_id')]
+        if columnas_id_bd:
+            print(f"\n🔑 Columnas de ID en la base de datos:")
+            for col in columnas_id_bd:
+                print(f"   - {col}")
         
         conn.close()
         
@@ -216,7 +180,7 @@ def test_pipeline_completo(aplicar_filtro_latam=False, guardar_resultado=False):
     print(f"   - Tecnologías identificadas: {resultado_carga['tecnologias_insertadas']}")
     
     if aplicar_filtro_latam:
-        print(f"\n🌎 Nota: Se aplicó filtro LATAM, solo se incluyeron países de Latinoamérica")
+        print(f"\n🌎 Nota: Se aplicó filtro LATAM")
     
     return True
 
@@ -226,7 +190,7 @@ def test_solo_latam():
     Ejecuta el pipeline completo con filtro LATAM
     """
     print_seccion("🌎 EJECUTANDO PIPELINE CON FILTRO LATAM", "=", 70)
-    print("\nNota: Solo se incluirán países de Latinoamérica (Brazil, Argentina, Chile, México, Colombia, Perú, etc.)")
+    print("\nNota: Solo se incluirán países de Latinoamérica")
     
     return test_pipeline_completo(aplicar_filtro_latam=True, guardar_resultado=True)
 
@@ -239,8 +203,6 @@ def test_sin_filtro():
 
 
 if __name__ == "__main__":
-    import sqlite3
-    
     print("=" * 70)
     print("🧪 JOBFORUS - PRUEBA INTEGRADA DEL PIPELINE COMPLETO")
     print("=" * 70)
